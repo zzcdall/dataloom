@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>示例：零售销售数据 · DataLoom 分析报告</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <style>
+    :root {
+      --ink: #101828; --muted: #667085; --line: #eaecf0; --panel: #ffffff;
+      --bg: #f6f7fb; --accent: #5b5bd6; --soft: #eef0ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; line-height: 1.6; }
+    .page { max-width: 1180px; margin: 0 auto; padding: 40px 28px 64px; }
+    header.hero { background: linear-gradient(135deg, #15153d 0%, #2b2b76 55%, #4f46b8 100%);
+      color: #fff; border-radius: 24px; padding: 34px 36px; position: relative; overflow: hidden; }
+    header.hero::after { content: ""; position: absolute; width: 320px; height: 320px; right: -80px; top: -140px;
+      border: 1px solid rgba(255,255,255,.18); border-radius: 50%; box-shadow: 0 0 0 42px rgba(255,255,255,.04),
+      0 0 0 84px rgba(255,255,255,.03); }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: .12em;
+      text-transform: uppercase; color: rgba(255,255,255,.72); }
+    .mark { width: 30px; height: 30px; border-radius: 9px; background: #fff; color: #2b2b76;
+      display: grid; place-items: center; font-weight: 800; letter-spacing: 0; }
+    h1 { font-size: 34px; line-height: 1.2; margin: 18px 0 8px; font-weight: 720; letter-spacing: -.02em; }
+    .hero p { margin: 0; color: rgba(255,255,255,.72); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .chip { border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08);
+      padding: 5px 11px; border-radius: 999px; font-size: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0 30px; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+    .stat .label { color: var(--muted); font-size: 12px; }
+    .stat .value { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; }
+    h2 { font-size: 20px; margin: 34px 0 14px; letter-spacing: -.01em; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .insight { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; break-inside: avoid; }
+    .insight-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .tag { color: var(--accent); background: var(--soft); border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 650; }
+    .confidence { color: #98a2b3; font-size: 11px; }
+    .insight h3 { font-size: 16px; line-height: 1.45; margin: 12px 0 6px; }
+    .summary { color: #344054; font-size: 13px; margin: 0 0 8px; }
+    .detail { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+    .chart { height: 240px; margin: 10px 0 2px; }
+    .chart-fallback { display: grid; place-items: center; min-height: 160px; padding: 20px;
+      border: 1px dashed #d0d5dd; border-radius: 12px; color: var(--muted); font-size: 13px;
+      text-align: center; background: #fafbff; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 4px; }
+    .metric-item { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fbfbff; }
+    .metric-item strong { display: block; font-size: 22px; letter-spacing: -.03em; }
+    .metric-item span { color: var(--muted); font-size: 11px; }
+    .metric-quote { margin: 16px 0 4px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .mini-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; color: var(--muted); font-size: 11px; }
+    code { background: #f2f4f7; border-radius: 5px; padding: 1px 5px; font-size: .92em; color: #3538cd; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line);
+      border-radius: 16px; overflow: hidden; font-size: 12px; }
+    th, td { text-align: left; padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: #f9fafb; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px; color: var(--muted); }
+    .scroll { overflow-x: auto; border-radius: 16px; }
+    footer { color: #98a2b3; font-size: 11px; margin-top: 40px; display: flex; justify-content: space-between; gap: 20px; }
+    @media (max-width: 800px) {
+      .page { padding: 20px 14px 40px; }
+      header.hero { padding: 26px 22px; border-radius: 18px; }
+      h1 { font-size: 26px; }
+      .stats, .grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media print {
+      body { background: #fff; }
+      .page { max-width: none; padding: 0; }
+      header.hero { border-radius: 0; }
+      .insight, .stat, table { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="brand"><span class="mark">DL</span> DataLoom · 数织</div>
+      <h1>示例：零售销售数据</h1>
+      <p>自动生成的数据分析报告</p>
+      <div class="chips">
+        <span class="chip">1,808 行</span>
+        <span class="chip">12 列</span>
+        <span class="chip">完整度 99.1%</span>
+        <span class="chip">生成于 2026-11-02 20:14</span>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><div class="label">数据健康分</div><div class="value">99</div></div>
+      <div class="stat"><div class="label">完整度</div><div class="value">99.1%</div></div>
+      <div class="stat"><div class="label">重复行</div><div class="value">8</div></div>
+      <div class="stat"><div class="label">字段数</div><div class="value">12</div></div>
+    </section>
+
+    <h2>关键发现</h2>
+    <section class="grid">
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">概览</span>
+                <span class="confidence">置信度 高</span>
+              </div>
+              <h3>1,808 行 × 12 列</h3>
+              <p class="summary">6 个数值字段、3 个分类字段、1 个时间字段。</p>
+              
+              <div class='metric-grid'><div class='metric-item'><strong>99</strong><span>健康分</span></div><div class='metric-item'><strong>1,808</strong><span>行</span></div><div class='metric-item'><strong>12</strong><span>列</span></div></div>
+              <p class="detail">整体完整度 99.1%。缺失值占 0.9%。发现 8 行完全重复记录。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">数据质量</span>
+                <span class="confidence">置信度 高</span>
+              </div>
+              <h3>3 个字段存在缺失，最高 8.1%</h3>
+              <p class="summary">缺失最集中在 <code>满意度</code>，共 147 个空值。</p>
+              <div class="chart" id="chart-1"></div>
+              
+              <p class="detail">缺失值会改变分组占比和平均值。若缺失并非随机，建议先补充或单独标记。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">趋势</span>
+                <span class="confidence">置信度 中</span>
+              </div>
+              <h3><code>销售额</code> 整体上升 ↑</h3>
+              <p class="summary">从 2024-01 的 5.31 万 到 2025-12 的 6.91 万，变化 +30.1%。</p>
+              <div class="chart" id="chart-2"></div>
+              
+              <p class="detail">按月汇总（sum），线性拟合 R²=0.10。建议再结合同比、季节性和分组拆解验证。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">相关性</span>
+                <span class="confidence">置信度 高</span>
+              </div>
+              <h3><code>销售额</code> 与 <code>利润</code> 呈强正相关（r=0.73）</h3>
+              <p class="summary">基于 1,773 个有效样本；销售额 越高，利润 通常越高。</p>
+              <div class="chart" id="chart-3"></div>
+              
+              <p class="detail">相关不等于因果。建议按分类字段分层后再判断，避免辛普森悖论。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">数据质量</span>
+                <span class="confidence">置信度 高</span>
+              </div>
+              <h3>发现 8 行完全重复</h3>
+              <p class="summary">占全部记录的 0.4%。</p>
+              
+              <div class='metric-grid'><div class='metric-item'><strong>8</strong><span>重复行</span></div></div>
+              <p class="detail">重复记录会放大计数、求和和占比。建议确认业务含义后在导入前去重。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">相关性</span>
+                <span class="confidence">置信度 中</span>
+              </div>
+              <h3><code>订单数</code> 与 <code>客单价</code> 呈中等负相关（r=-0.58）</h3>
+              <p class="summary">基于 1,808 个有效样本；订单数 越高，客单价 通常越低。</p>
+              <div class="chart" id="chart-5"></div>
+              
+              <p class="detail">相关不等于因果。建议按分类字段分层后再判断，避免辛普森悖论。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">分组对比</span>
+                <span class="confidence">置信度 高</span>
+              </div>
+              <h3><code>销售额</code> 高度集中在 <code>线上</code>（61.0%）</h3>
+              <p class="summary">第一名 <code>线上</code> 为 103.23 万，前 3 名合计占 100.0%。</p>
+              <div class="chart" id="chart-6"></div>
+              
+              <p class="detail">分组差异适合用来定位重点区域、渠道或品类；如果分组数量很多，建议先合并长尾。</p>
+            </article>
+            
+            <article class="insight">
+              <div class="insight-head">
+                <span class="tag">异常值</span>
+                <span class="confidence">置信度 中</span>
+              </div>
+              <h3><code>客单价</code> 有 7.5% 的异常值</h3>
+              <p class="summary">135 个样本落在 IQR 区间 [-310, 789] 之外。</p>
+              <div class="chart" id="chart-7"></div>
+              
+              <p class="detail">最大值 3,156，中位数 202。异常不一定是错误，建议先核实来源。</p>
+            </article>
+            </section>
+
+    <h2>字段概览</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>字段</th><th>类型</th><th>缺失率</th><th>唯一值</th><th>示例</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>订单日期</strong></td>
+          <td><span class="pill">日期</span></td>
+          <td>0.0%</td>
+          <td>662</td>
+          <td>2024-01-01 00:00:00, 2024-01-02 00:00:00</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>地区</strong></td>
+          <td><span class="pill">文本</span></td>
+          <td>0.3%</td>
+          <td>5</td>
+          <td>华东, 华南</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>品类</strong></td>
+          <td><span class="pill">文本</span></td>
+          <td>0.0%</td>
+          <td>5</td>
+          <td>数码, 食品</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>渠道</strong></td>
+          <td><span class="pill">文本</span></td>
+          <td>0.0%</td>
+          <td>3</td>
+          <td>线上</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>营销活动</strong></td>
+          <td><span class="pill">布尔</span></td>
+          <td>0.0%</td>
+          <td>2</td>
+          <td>False</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>销售额</strong></td>
+          <td><span class="pill">数值</span></td>
+          <td>0.0%</td>
+          <td>1,792</td>
+          <td>1851.62, 240.49, 1247.8</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>订单数</strong></td>
+          <td><span class="pill">数值</span></td>
+          <td>0.0%</td>
+          <td>8</td>
+          <td>4, 5, 7</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>利润</strong></td>
+          <td><span class="pill">数值</span></td>
+          <td>1.9%</td>
+          <td>1,727</td>
+          <td>252.49, 30.95, 80.0</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>客单价</strong></td>
+          <td><span class="pill">数值</span></td>
+          <td>0.0%</td>
+          <td>1,768</td>
+          <td>462.9, 48.1, 178.26</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>客户年龄</strong></td>
+          <td><span class="pill">数值</span></td>
+          <td>0.0%</td>
+          <td>45</td>
+          <td>27, 41, 42</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>满意度</strong></td>
+          <td><span class="pill">数值</span></td>
+          <td>8.1%</td>
+          <td>29</td>
+          <td>3.4, 4.5</td>
+        </tr>
+        
+
+        <tr>
+          <td><strong>客户ID</strong></td>
+          <td><span class="pill">文本</span></td>
+          <td>0.0%</td>
+          <td>1,510</td>
+          <td>C05330, C04098, C01426</td>
+        </tr>
+        </tbody>
+    </table></div>
+
+    <h2>数据预览</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>订单日期</th><th>地区</th><th>品类</th><th>渠道</th><th>营销活动</th><th>销售额</th><th>订单数</th><th>利润</th><th>客单价</th><th>客户年龄</th><th>满意度</th><th>客户ID</th></tr></thead>
+      <tbody><tr><td>2024-01-01T00:00:00</td><td>华东</td><td>数码</td><td>线上</td><td>False</td><td>1851.62</td><td>4</td><td>252.49</td><td>462.9</td><td>27</td><td>3.4</td><td>C05330</td></tr><tr><td>2024-01-02T00:00:00</td><td>华南</td><td>食品</td><td>线上</td><td>False</td><td>240.49</td><td>5</td><td>30.95</td><td>48.1</td><td>41</td><td>3.4</td><td>C04098</td></tr><tr><td>2024-01-02T00:00:00</td><td>华东</td><td>数码</td><td>线上</td><td>False</td><td>1247.8</td><td>7</td><td>80.0</td><td>178.26</td><td>42</td><td>4.5</td><td>C01426</td></tr><tr><td>2024-01-03T00:00:00</td><td>华南</td><td>服饰</td><td>线上</td><td>False</td><td>477.34</td><td>7</td><td>139.32</td><td>68.19</td><td>28</td><td>4.1</td><td>C01944</td></tr><tr><td>2024-01-03T00:00:00</td><td>西南</td><td>家居</td><td>线下</td><td>True</td><td>773.42</td><td>1</td><td>223.23</td><td>773.42</td><td>32</td><td>2.6</td><td>C00888</td></tr><tr><td>2024-01-04T00:00:00</td><td>华北</td><td>数码</td><td>线上</td><td>False</td><td>946.95</td><td>1</td><td>230.96</td><td>946.95</td><td>37</td><td>4.9</td><td>C00671</td></tr><tr><td>2024-01-04T00:00:00</td><td>西南</td><td>服饰</td><td>线下</td><td>False</td><td>271.57</td><td>7</td><td>73.79</td><td>38.8</td><td>29</td><td>3.4</td><td>C00527</td></tr><tr><td>2024-01-04T00:00:00</td><td>华南</td><td>家居</td><td>线上</td><td>False</td><td>809.26</td><td>6</td><td>82.57</td><td>134.88</td><td>36</td><td>2.9</td><td>C04379</td></tr><tr><td>2024-01-04T00:00:00</td><td>华南</td><td>家居</td><td>线下</td><td>False</td><td>603.95</td><td>7</td><td>82.66</td><td>86.28</td><td>41</td><td>4.4</td><td>C02399</td></tr><tr><td>2024-01-04T00:00:00</td><td>华东</td><td>家居</td><td>线下</td><td>False</td><td>537.98</td><td>5</td><td>121.48</td><td>107.6</td><td>38</td><td>3.5</td><td>C03224</td></tr><tr><td>2024-01-04T00:00:00</td><td>华东</td><td>家居</td><td>线上</td><td>False</td><td>718.6</td><td>4</td><td>155.13</td><td>179.65</td><td>35</td><td>4.4</td><td>C04242</td></tr><tr><td>2024-01-04T00:00:00</td><td>华南</td><td>美妆</td><td>线上</td><td>False</td><td>475.64</td><td>4</td><td>166.04</td><td>118.91</td><td>33</td><td>4.7</td><td>C02789</td></tr><tr><td>2024-01-05T00:00:00</td><td>华北</td><td>服饰</td><td>线上</td><td>False</td><td>561.97</td><td>2</td><td>185.67</td><td>280.99</td><td>45</td><td>4.3</td><td>C02886</td></tr><tr><td>2024-01-05T00:00:00</td><td>华南</td><td>家居</td><td>线上</td><td>False</td><td>523.73</td><td>8</td><td>153.0</td><td>65.47</td><td>32</td><td>4.2</td><td>C03350</td></tr><tr><td>2024-01-06T00:00:00</td><td>华东</td><td>服饰</td><td>线下</td><td>False</td><td>369.47</td><td>3</td><td>81.06</td><td>123.16</td><td>24</td><td>3.4</td><td>C02449</td></tr><tr><td>2024-01-06T00:00:00</td><td>华北</td><td>美妆</td><td>分销</td><td>False</td><td>262.78</td><td>6</td><td>112.97</td><td>43.8</td><td>41</td><td>4.1</td><td>C00579</td></tr><tr><td>2024-01-06T00:00:00</td><td>东北</td><td>服饰</td><td>线上</td><td>False</td><td>325.85</td><td>2</td><td>62.58</td><td>162.93</td><td>53</td><td>4.2</td><td>C03012</td></tr><tr><td>2024-01-06T00:00:00</td><td>华北</td><td>数码</td><td>分销</td><td>True</td><td>727.8</td><td>1</td><td>84.82</td><td>727.8</td><td>30</td><td>4.9</td><td>C02563</td></tr><tr><td>2024-01-06T00:00:00</td><td>华东</td><td>服饰</td><td>线下</td><td>True</td><td>524.27</td><td>4</td><td>197.63</td><td>131.07</td><td>35</td><td>4.4</td><td>C05151</td></tr><tr><td>2024-01-07T00:00:00</td><td>华北</td><td>食品</td><td>线上</td><td>False</td><td>159.07</td><td>3</td><td>38.54</td><td>53.02</td><td>32</td><td>3.4</td><td>C00436</td></tr></tbody>
+    </table></div>
+
+    <footer>
+      <span>由 DataLoom 本地生成 · 数据未离开这台机器</span>
+      <span>DataLoom v0.1.0</span>
+    </footer>
+  </main>
+  <script id="chart-data" type="application/json">[{"id":"chart-1","option":{"animationDuration":450,"color":["#5b5bd6","#12b76a","#f79009","#f04438","#06aed4","#9e77ed","#ee46bc","#84cc16"],"textStyle":{"fontFamily":"Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif","color":"#344054"},"tooltip":{"backgroundColor":"#ffffff","borderColor":"#eaecf0","borderWidth":1,"textStyle":{"color":"#101828","fontSize":12},"extraCssText":"box-shadow:0 10px 28px rgba(16,24,40,.12);border-radius:10px;padding:10px 12px;","trigger":"axis","axisPointer":{"type":"shadow","shadowStyle":{"color":"rgba(91,91,214,.06)"}}},"grid":{"left":10,"right":18,"top":26,"bottom":10,"containLabel":true},"xAxis":{"type":"value","axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"show":false}},"yAxis":{"type":"category","data":["地区","利润","满意度"],"axisLabel":{"color":"#667085","fontSize":11,"interval":0,"hideOverlap":true},"axisLine":{"lineStyle":{"color":"#d0d5dd"}},"axisTick":{"show":false}},"series":[{"name":"缺失率 (%)","type":"bar","data":[0.33,1.94,8.13],"barMaxWidth":26,"itemStyle":{"color":"#5b5bd6","borderRadius":[0,6,6,0]},"label":{"show":true,"position":"right","color":"#475467","fontSize":10,"formatter":"{c}"}}]}},{"id":"chart-2","option":{"animationDuration":450,"color":["#5b5bd6","#12b76a","#f79009","#f04438","#06aed4","#9e77ed","#ee46bc","#84cc16"],"textStyle":{"fontFamily":"Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif","color":"#344054"},"tooltip":{"backgroundColor":"#ffffff","borderColor":"#eaecf0","borderWidth":1,"textStyle":{"color":"#101828","fontSize":12},"extraCssText":"box-shadow:0 10px 28px rgba(16,24,40,.12);border-radius:10px;padding:10px 12px;","trigger":"axis"},"grid":{"left":10,"right":18,"top":26,"bottom":10,"containLabel":true},"legend":{"show":false,"top":0,"right":0,"icon":"circle","itemWidth":8,"itemHeight":8,"textStyle":{"color":"#667085","fontSize":11}},"xAxis":{"type":"category","data":["2024-01","2024-02","2024-03","2024-04","2024-05","2024-06","2024-07","2024-08","2024-09","2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12"],"boundaryGap":false,"axisLabel":{"color":"#667085","fontSize":11,"hideOverlap":true},"axisLine":{"lineStyle":{"color":"#d0d5dd"}},"axisTick":{"show":false},"name":"订单日期","nameTextStyle":{"color":"#98a2b3","fontSize":10}},"yAxis":{"type":"value","axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"show":false},"name":"销售额","nameTextStyle":{"color":"#98a2b3","fontSize":10}},"series":[{"name":"销售额","type":"line","data":[53127.88,42200.65,83127.8,79694.1,74402.74,72826.15,60699.04,80660.44,55838.91,60106.48,68297.24,59553.68,70800.58,62408.48,63815.36,73198.25,82403.42,97779.44,99015.42,77078.0,78407.27,55650.0,71109.63,69114.96],"smooth":0.25,"showSymbol":true,"symbol":"circle","symbolSize":6,"lineStyle":{"width":2.4,"color":"#5b5bd6"},"itemStyle":{"color":"#5b5bd6"},"areaStyle":{"opacity":0.07},"connectNulls":true}]}},{"id":"chart-3","option":{"animationDuration":450,"color":["#5b5bd6","#12b76a","#f79009","#f04438","#06aed4","#9e77ed","#ee46bc","#84cc16"],"textStyle":{"fontFamily":"Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif","color":"#344054"},"tooltip":{"backgroundColor":"#ffffff","borderColor":"#eaecf0","borderWidth":1,"textStyle":{"color":"#101828","fontSize":12},"extraCssText":"box-shadow:0 10px 28px rgba(16,24,40,.12);border-radius:10px;padding:10px 12px;","trigger":"item","formatter":"{a}<br/>{c}"},"grid":{"left":10,"right":18,"top":26,"bottom":10,"containLabel":true},"xAxis":{"type":"value","scale":true,"axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"lineStyle":{"color":"#d0d5dd"}},"name":"销售额","nameLocation":"middle","nameGap":24,"nameTextStyle":{"color":"#98a2b3","fontSize":10}},"yAxis":{"type":"value","scale":true,"axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"show":false},"name":"利润","nameTextStyle":{"color":"#98a2b3","fontSize":10}},"series":[{"name":"销售额 vs 利润","type":"scatter","data":[[266.39,20.36],[590.9,213.81],[977.32,258.75],[1119.87,271.95],[864.95,366.75],[1661.85,361.6],[319.22,152.63],[1510.19,133.09],[1625.91,371.89],[618.56,133.49],[485.36,150.44],[865.72,173.66],[1723.84,330.35],[524.97,151.22],[1900.42,356.77],[476.54,100.18],[1674.87,256.93],[1840.43,217.7],[463.93,171.23],[1290.1,262.9],[515.05,149.57],[271.17,44.0],[1166.32,320.48],[175.44,34.68],[782.54,301.87],[1245.29,379.22],[812.47,193.32],[383.08,133.13],[1864.05,593.08],[490.85,102.77],[271.68,11.52],[1087.25,429.1],[851.2,336.85],[369.18,57.22],[2276.73,446.92],[615.45,152.44],[430.68,66.74],[811.16,107.93],[1448.28,549.21],[645.22,222.53],[725.73,202.72],[902.82,137.78],[1101.03,335.3],[2304.48,358.0],[463.81,95.22],[977.94,236.21],[613.49,208.83],[1680.11,285.81],[1679.43,377.29],[1073.37,269.75],[2748.33,859.42],[1822.13,242.84],[483.31,164.7],[503.23,142.09],[2725.64,396.26],[1278.07,237.01],[281.51,105.15],[1369.27,424.18],[1243.04,197.85],[1272.01,213.83],[906.75,236.48],[1811.61,460.06],[1485.72,293.57],[1449.1,294.16],[819.27,177.84],[443.98,74.26],[668.6,240.48],[1287.87,260.78],[2410.74,355.86],[579.74,225.08],[1551.8,244.32],[653.96,112.8],[773.42,223.23],[2300.47,393.2],[329.42,78.78],[398.5,50.09],[846.4,237.53],[1380.75,273.73],[1709.9,418.59],[2220.36,661.15],[580.75,188.84],[769.32,71.6],[652.18,130.46],[167.05,38.82],[1611.03,261.17],[301.82,32.96],[754.35,247.2],[1484.04,375.87],[435.13,103.79],[621.91,187.34],[776.65,225.5],[188.85,2.78],[226.38,57.9],[2058.15,139.08],[337.53,48.79],[396.52,127.48],[890.31,267.33],[324.28,61.54],[420.64,175.41],[353.22,122.24],[940.69,276.26],[459.24,219.08],[481.74,205.23],[685.97,166.49],[1320.93,165.96],[1913.22,360.05],[1388.29,381.65],[669.37,329.94],[507.69,183.78],[480.82,177.06],[552.1,185.6],[1850.02,262.15],[364.84,187.85],[406.88,180.45],[1913.31,551.57],[1973.66,439.01],[1510.59,75.15],[1779.66,161.92],[685.99,222.08],[1892.33,212.93],[1084.82,189.78],[1392.72,287.19],[628.08,133.8],[322.73,49.44],[153.58,21.08],[959.9,318.84],[221.61,64.96],[304.65,72.47],[830.52,14.05],[1949.38,704.81],[595.14,213.56],[1414.23,126.48],[476.17,111.61],[366.55,69.64],[649.05,170.98],[929.59,194.41],[1688.97,539.13],[2403.37,154.34],[929.47,476.54],[899.83,277.93],[461.41,158.16],[1792.77,126.71],[659.6,204.93],[256.6,46.45],[949.05,272.25],[591.18,185.94],[192.98,20.34],[1291.62,318.27],[1158.36,127.48],[1556.62,288.66],[2078.84,412.73],[599.73,201.73],[156.04,20.14],[801.44,189.36],[667.19,202.31],[1260.29,332.77],[1336.59,249.18],[3747.09,854.93],[686.36,263.0],[813.3,200.36],[479.27,191.75],[290.79,1.24],[430.01,107.37],[879.62,247.96],[1242.56,223.98],[218.98,25.69],[2405.11,224.8],[1519.59,278.23],[503.6,104.78],[547.68,131.44],[1312.92,223.89],[1364.92,381.59],[1646.71,269.49],[423.0,143.81],[453.87,108.9],[1435.48,163.52],[1794.14,203.49],[875.94,174.95],[1873.72,221.36],[570.09,202.14],[896.53,268.63],[1602.4,573.87],[2558.27,479.99],[949.6,225.29],[145.48,31.16],[1231.12,176.68],[1222.01,117.61],[215.72,33.89],[583.63,131.37],[1035.36,254.22],[377.59,153.45],[1097.93,334.01],[178.44,30.31],[991.42,332.26],[411.31,63.88],[860.85,294.44],[1361.91,522.24],[1676.24,70.89],[450.08,118.05],[637.37,269.49],[2266.61,503.97],[207.17,24.83],[1042.06,198.79],[1046.47,215.04],[931.93,128.66],[1712.82,306.3],[927.4,171.26],[2277.85,680.98],[829.81,327.26],[735.62,151.57],[847.35,211.97],[1735.41,262.71],[412.74,18.55],[1890.66,322.34],[271.4,26.74],[580.68,195.87],[446.32,157.43],[972.1,272.47],[2368.54,249.43],[328.18,96.5],[535.16,171.74],[411.6,24.22],[2278.84,572.15],[2697.67,517.94],[982.26,160.58],[496.86,106.44],[1968.01,271.03],[561.97,185.67],[1919.37,600.11],[1833.78,299.15],[1312.06,187.7],[1247.8,80.0],[1093.98,187.52],[1762.21,360.51],[657.83,209.71],[654.79,180.8],[523.29,84.18],[535.26,170.69],[202.82,21.5],[537.98,121.48],[885.0,328.95],[356.55,40.1],[1131.51,174.64],[523.73,153.0],[1614.3,400.64],[932.8,406.54],[1990.72,282.82],[591.2,75.86],[209.15,33.04],[1217.5,205.15],[1643.91,372.24],[137.86,9.23],[569.29,273.58],[343.68,106.05],[887.87,349.89],[1064.12,256.15],[713.53,131.79],[1396.6,454.19],[420.47,36.15],[1824.84,265.23],[372.32,109.4],[395.38,29.8],[1041.49,143.81],[1406.42,261.18],[888.61,122.39],[867.3,392.68],[853.71,167.7],[1113.42,371.26],[549.39,133.56],[615.43,189.84],[1271.62,348.15],[1297.89,476.29],[540.82,129.41],[1573.97,434.74],[1940.57,318.94],[1370.27,236.6],[603.93,201.13],[835.9,195.99],[737.06,232.43],[475.79,131.04],[715.66,132.4],[495.75,150.0],[331.86,70.85],[685.61,282.08],[1729.43,670.13],[1305.66,349.32],[601.31,211.01],[1185.91,232.98],[1413.94,158.56],[837.32,240.64],[330.04,76.65],[518.15,138.13],[105.39,10.2],[1542.57,639.31],[1230.03,207.99],[165.07,46.95],[582.88,196.64],[1228.31,170.94],[855.68,258.63],[744.24,149.41],[319.75,116.62],[419.02,185.27],[177.15,35.51],[1434.29,257.09],[774.57,187.04],[408.69,110.64],[847.09,189.59],[1748.02,478.03],[1011.73,331.23],[3268.76,392.16],[192.06,44.63],[1959.79,575.07],[1132.05,199.57],[1406.74,333.27],[1665.92,577.01],[996.7,198.97],[588.89,288.99],[355.83,75.34],[1232.07,197.85],[1009.33,193.71],[976.05,377.6],[660.4,269.38],[500.78,120.88],[727.8,84.82],[1146.08,264.01],[1188.16,220.35],[1868.77,351.46],[593.4,179.42],[1142.09,329.64],[701.07,257.8],[610.24,194.7],[1260.79,348.07],[1033.88,186.83],[524.98,161.22],[1815.53,529.13],[1590.99,318.86],[791.94,120.19],[1752.64,244.58],[1784.22,512.67],[1034.02,186.32],[694.73,195.95],[585.23,130.19],[890.36,245.25],[743.5,191.05],[1231.41,182.52],[1014.96,55.08],[1279.57,121.16],[782.62,252.46],[577.41,107.25],[927.95,255.87],[409.06,145.39],[468.44,194.03],[373.76,174.53],[215.86,42.55],[475.49,140.89],[1350.32,375.65],[1106.65,184.66],[799.85,226.18],[934.43,358.31],[1034.46,352.24],[262.78,112.97],[514.33,116.15],[1308.19,263.97],[375.34,118.57],[1182.67,253.0],[859.13,206.86],[1070.94,245.08],[1665.25,385.72],[1537.66,138.8],[1119.74,325.27],[264.1,27.88],[1258.85,144.22],[373.43,149.12],[871.44,269.91],[698.18,360.16],[857.64,236.6],[678.71,181.43],[372.3,43.27],[1990.78,268.01],[1558.63,398.56],[2900.64,76.0],[276.26,10.76],[806.71,322.62],[1523.41,221.38],[1112.15,290.33],[1566.72,425.41],[595.06,207.94],[1117.63,341.77],[529.64,149.88],[396.36,103.53],[592.2,158.39],[2386.64,627.8],[2139.87,511.97],[1733.5,183.49],[582.93,247.57],[1419.04,321.58],[1375.68,350.79],[1052.59,483.11],[1325.37,-62.2],[1331.34,344.75],[468.44,194.03],[296.06,59.66],[1192.52,346.61],[446.39,137.73],[645.74,182.23],[360.42,66.29],[622.89,161.75],[2400.08,176.16],[165.57,29.62],[766.96,321.37],[1088.55,326.08],[501.33,122.93],[1687.16,439.61],[923.46,167.39],[411.27,168.0],[1388.05,338.1],[630.41,137.65],[824.41,163.01],[426.75,145.54],[354.39,39.21],[414.68,108.07],[259.08,86.92],[376.16,67.61],[501.52,183.76],[1234.03,181.07],[1178.27,346.79],[677.19,171.44],[605.09,178.15],[1461.35,233.01],[1134.72,211.42],[356.13,105.55],[452.07,159.67],[587.25,45.94],[1083.65,189.07],[564.25,136.19],[227.67,65.07],[188.2,44.87],[1305.36,208.32],[414.72,120.55],[397.27,126.94],[232.5,41.45],[152.44,4.37],[652.79,298.07],[1996.14,531.43],[676.54,197.35],[797.5,243.82],[422.54,176.31],[1026.09,222.6],[1235.74,309.92],[2278.45,430.65],[363.62,151.74],[454.28,89.3],[1351.9,355.25],[669.21,217.69],[1184.23,60.98],[211.42,24.94],[939.82,295.29],[1074.0,324.44],[353.82,82.23],[490.52,135.17],[140.5,24.86],[1279.96,89.39],[1577.8,151.78],[2701.64,841.44],[1266.12,153.3],[152.66,5.39],[1375.18,327.02],[1048.96,132.47],[459.26,123.69],[586.55,235.66],[214.92,17.02],[236.99,50.45],[1072.82,237.47],[587.68,147.25],[445.46,147.27],[173.32,23.87],[133.8,36.59],[351.61,22.31],[1191.84,288.0],[1015.08,222.29],[636.58,159.82],[576.69,170.81],[1831.5,376.57],[877.31,138.56],[228.79,74.16],[1817.97,271.22],[721.92,198.79],[2224.85,235.9],[914.78,257.81],[218.72,35.86],[1365.46,397.5],[1197.12,277.06],[481.0,109.65],[1725.6,253.49],[649.23,194.24],[673.76,258.9],[818.33,262.92],[2437.72,331.61],[1275.82,404.77],[1472.25,363.16]],"symbolSize":7,"itemStyle":{"color":"#5b5bd6","opacity":0.55},"emphasis":{"itemStyle":{"opacity":1}}},{"name":"拟合线 (r=0.73)","type":"line","data":[[76.18,67.09021395176921],[3747.09,680.8887623495285]],"showSymbol":false,"silent":true,"lineStyle":{"width":2,"type":"dashed","color":"#f04438"},"tooltip":{"show":false}}]}},{"id":"chart-5","option":{"animationDuration":450,"color":["#5b5bd6","#12b76a","#f79009","#f04438","#06aed4","#9e77ed","#ee46bc","#84cc16"],"textStyle":{"fontFamily":"Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif","color":"#344054"},"tooltip":{"backgroundColor":"#ffffff","borderColor":"#eaecf0","borderWidth":1,"textStyle":{"color":"#101828","fontSize":12},"extraCssText":"box-shadow:0 10px 28px rgba(16,24,40,.12);border-radius:10px;padding:10px 12px;","trigger":"item","formatter":"{a}<br/>{c}"},"grid":{"left":10,"right":18,"top":26,"bottom":10,"containLabel":true},"xAxis":{"type":"value","scale":true,"axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"lineStyle":{"color":"#d0d5dd"}},"name":"订单数","nameLocation":"middle","nameGap":24,"nameTextStyle":{"color":"#98a2b3","fontSize":10}},"yAxis":{"type":"value","scale":true,"axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"show":false},"name":"客单价","nameTextStyle":{"color":"#98a2b3","fontSize":10}},"series":[{"name":"订单数 vs 客单价","type":"scatter","data":[[6.0,202.6],[3.0,314.06],[2.0,532.06],[3.0,150.08],[4.0,53.99],[3.0,209.45],[6.0,23.41],[7.0,97.1],[6.0,238.93],[3.0,50.8],[8.0,135.31],[5.0,195.21],[2.0,622.64],[6.0,343.73],[4.0,258.47],[5.0,185.92],[4.0,192.74],[7.0,34.05],[2.0,418.66],[1.0,2011.69],[7.0,63.77],[1.0,259.09],[8.0,61.62],[2.0,238.27],[3.0,127.69],[3.0,151.42],[7.0,97.37],[8.0,97.33],[1.0,2558.27],[2.0,861.92],[2.0,488.66],[8.0,75.16],[4.0,400.14],[2.0,556.08],[7.0,36.9],[1.0,317.65],[3.0,222.4],[7.0,84.77],[5.0,28.96],[4.0,243.41],[5.0,70.86],[1.0,1331.34],[1.0,1509.88],[1.0,1329.41],[4.0,491.9],[5.0,218.94],[2.0,821.96],[3.0,755.68],[2.0,171.84],[4.0,131.24],[4.0,262.74],[1.0,1469.71],[3.0,550.77],[2.0,854.95],[6.0,290.55],[2.0,400.72],[5.0,32.23],[1.0,769.32],[1.0,1272.01],[6.0,41.54],[6.0,97.16],[7.0,68.71],[6.0,44.03],[8.0,84.65],[4.0,69.06],[1.0,1271.91],[6.0,123.02],[6.0,222.77],[4.0,53.56],[6.0,148.17],[2.0,444.3],[3.0,458.56],[7.0,68.5],[8.0,87.29],[3.0,294.67],[4.0,170.52],[5.0,238.65],[7.0,178.26],[2.0,433.8],[8.0,59.91],[8.0,283.84],[3.0,104.38],[2.0,362.75],[7.0,357.08],[8.0,158.91],[7.0,90.94],[8.0,46.74],[1.0,603.43],[4.0,310.76],[1.0,1435.48],[7.0,83.17],[4.0,528.93],[4.0,342.57],[1.0,773.42],[8.0,114.75],[5.0,235.84],[7.0,202.02],[3.0,136.31],[4.0,76.98],[6.0,28.38],[1.0,1356.67],[1.0,756.49],[7.0,163.73],[8.0,57.8],[4.0,466.37],[5.0,71.35],[6.0,282.76],[3.0,156.24],[2.0,778.31],[5.0,43.0],[8.0,42.74],[6.0,345.15],[3.0,552.18],[4.0,482.69],[5.0,66.01],[8.0,93.75],[2.0,727.59],[3.0,418.5],[8.0,51.54],[2.0,291.81],[5.0,185.31],[6.0,415.91],[1.0,1388.29],[1.0,745.79],[7.0,208.76],[8.0,30.83],[8.0,36.99],[4.0,250.7],[5.0,164.21],[6.0,279.54],[2.0,295.59],[2.0,759.79],[5.0,355.2],[4.0,171.73],[4.0,203.12],[4.0,261.94],[8.0,63.51],[5.0,42.39],[1.0,715.62],[6.0,97.2],[5.0,130.65],[8.0,84.92],[4.0,557.46],[6.0,367.28],[2.0,660.46],[7.0,273.33],[6.0,25.6],[7.0,226.49],[8.0,49.55],[4.0,103.28],[2.0,612.91],[2.0,70.25],[7.0,100.47],[5.0,193.09],[6.0,132.14],[8.0,29.79],[6.0,233.88],[3.0,138.3],[2.0,717.14],[1.0,975.45],[8.0,251.15],[8.0,247.47],[3.0,228.79],[3.0,492.29],[6.0,64.75],[1.0,359.19],[8.0,50.81],[4.0,220.9],[1.0,524.97],[1.0,1595.96],[1.0,1279.96],[8.0,44.34],[5.0,570.1],[1.0,1606.82],[7.0,22.29],[6.0,295.53],[5.0,248.51],[5.0,179.87],[4.0,365.13],[5.0,72.08],[6.0,134.88],[3.0,78.21],[8.0,118.63],[7.0,108.22],[4.0,107.5],[8.0,21.55],[1.0,1361.91],[8.0,29.13],[7.0,120.49],[1.0,503.6],[3.0,211.8],[3.0,254.08],[1.0,1152.61],[4.0,358.11],[7.0,266.97],[8.0,46.08],[7.0,64.84],[7.0,52.21],[5.0,77.32],[5.0,549.97],[6.0,119.74],[4.0,319.09],[1.0,532.43],[4.0,290.97],[2.0,217.56],[3.0,410.01],[3.0,483.9],[5.0,561.07],[2.0,482.47],[4.0,189.25],[1.0,669.21],[7.0,171.02],[8.0,117.12],[2.0,412.21],[1.0,159.23],[2.0,399.87],[2.0,249.72],[8.0,198.61],[1.0,218.98],[8.0,26.37],[8.0,73.74],[5.0,36.14],[1.0,782.54],[1.0,708.05],[6.0,146.6],[8.0,104.95],[2.0,795.5],[8.0,130.26],[8.0,69.56],[8.0,29.82],[3.0,524.66],[4.0,258.5],[5.0,94.73],[8.0,186.96],[6.0,128.63],[1.0,459.91],[2.0,1245.04],[7.0,109.71],[7.0,90.64],[3.0,193.22],[1.0,609.22],[1.0,847.35],[6.0,247.34],[7.0,52.79],[8.0,192.49],[8.0,66.9],[4.0,199.96],[8.0,144.74],[5.0,386.89],[3.0,209.01],[2.0,442.68],[4.0,142.51],[2.0,280.99],[7.0,180.45],[3.0,637.28],[7.0,54.51],[7.0,210.04],[7.0,74.02],[3.0,108.09],[3.0,178.42],[7.0,95.51],[5.0,107.6],[7.0,76.06],[5.0,411.3],[6.0,416.95],[8.0,65.47],[7.0,44.59],[8.0,27.59],[8.0,23.18],[6.0,102.17],[7.0,148.78],[7.0,35.72],[7.0,88.55],[6.0,164.5],[3.0,226.24],[2.0,364.15],[5.0,432.99],[5.0,119.95],[5.0,516.65],[2.0,254.26],[6.0,136.39],[2.0,605.31],[2.0,556.71],[1.0,472.14],[2.0,1149.64],[5.0,119.79],[4.0,324.47],[4.0,135.2],[1.0,879.81],[8.0,83.57],[7.0,150.37],[3.0,92.46],[3.0,102.46],[1.0,1163.49],[6.0,319.76],[8.0,181.1],[8.0,227.77],[3.0,327.65],[7.0,339.41],[1.0,512.72],[2.0,246.82],[7.0,131.92],[3.0,534.13],[1.0,2368.54],[7.0,206.26],[4.0,353.49],[5.0,357.2],[6.0,116.9],[8.0,46.01],[8.0,68.3],[2.0,455.52],[2.0,582.32],[7.0,83.27],[8.0,108.04],[1.0,329.11],[2.0,130.79],[5.0,206.21],[2.0,110.52],[8.0,108.9],[6.0,90.59],[7.0,69.04],[8.0,128.71],[7.0,25.31],[6.0,400.56],[4.0,183.9],[1.0,1618.06],[4.0,119.64],[5.0,397.0],[1.0,2749.6],[5.0,182.48],[8.0,73.75],[3.0,150.62],[2.0,439.32],[8.0,55.88],[6.0,159.59],[4.0,50.71],[7.0,159.68],[5.0,32.23],[7.0,156.95],[4.0,164.46],[4.0,44.26],[4.0,163.03],[6.0,544.79],[4.0,509.24],[3.0,228.66],[7.0,140.77],[1.0,727.8],[4.0,274.48],[1.0,1978.4],[1.0,304.46],[4.0,102.57],[6.0,211.47],[3.0,357.9],[1.0,715.66],[3.0,276.6],[5.0,252.16],[1.0,580.68],[1.0,232.69],[7.0,23.36],[4.0,152.47],[6.0,242.42],[4.0,56.3],[7.0,105.45],[6.0,228.21],[1.0,377.59],[8.0,30.78],[8.0,73.9],[1.0,890.36],[1.0,1160.87],[4.0,155.48],[3.0,453.95],[5.0,119.78],[1.0,645.22],[7.0,43.31],[4.0,456.12],[6.0,72.03],[2.0,247.47],[8.0,47.36],[6.0,102.57],[8.0,66.65],[6.0,86.38],[7.0,110.13],[8.0,191.37],[4.0,208.8],[2.0,589.13],[6.0,43.8],[5.0,116.15],[2.0,292.84],[2.0,358.35],[6.0,139.7],[8.0,127.15],[7.0,56.27],[2.0,1192.83],[1.0,549.89],[6.0,186.62],[1.0,214.92],[3.0,353.45],[1.0,2277.85],[4.0,534.97],[8.0,24.4],[1.0,978.52],[3.0,381.09],[2.0,72.74],[2.0,144.68],[8.0,129.81],[4.0,83.04],[3.0,606.43],[3.0,197.21],[6.0,145.24],[8.0,201.38],[3.0,300.94],[4.0,37.34],[4.0,466.01],[7.0,75.66],[2.0,76.22],[7.0,27.44],[1.0,356.44],[5.0,154.11],[5.0,374.5],[3.0,237.78],[4.0,116.64],[4.0,487.55],[5.0,171.53],[3.0,289.21],[1.0,1927.12],[7.0,311.87],[7.0,337.97],[6.0,49.34],[8.0,92.94],[2.0,198.26],[6.0,50.3],[6.0,72.88],[8.0,173.51],[2.0,240.49],[7.0,150.97],[2.0,82.79],[7.0,147.78],[3.0,425.89],[6.0,103.14],[5.0,244.58],[4.0,76.16],[7.0,91.39],[1.0,1141.7],[4.0,157.6],[6.0,93.25],[1.0,1635.03],[3.0,144.02],[2.0,281.92],[2.0,641.7],[5.0,240.93],[2.0,180.39],[8.0,283.24],[2.0,896.39],[4.0,126.38],[1.0,1523.41],[3.0,246.83],[7.0,68.69],[6.0,140.5],[1.0,569.29],[6.0,86.36],[7.0,69.34],[7.0,83.95],[2.0,457.91],[3.0,374.23],[6.0,64.96],[6.0,263.54],[6.0,38.66],[4.0,65.09],[4.0,198.38],[8.0,300.64],[6.0,141.07],[4.0,308.51],[2.0,426.59],[3.0,244.11],[4.0,87.95],[3.0,341.01],[2.0,196.59],[7.0,126.34],[4.0,134.94],[7.0,279.97],[8.0,54.27],[2.0,326.07],[2.0,592.11],[2.0,247.88],[2.0,469.91],[5.0,96.89],[3.0,289.18],[7.0,68.28],[8.0,131.55],[3.0,133.47],[3.0,419.62],[1.0,247.92],[4.0,216.12],[1.0,1133.74],[7.0,211.7],[4.0,382.06],[7.0,165.14],[5.0,137.99],[5.0,127.06],[4.0,580.19]],"symbolSize":7,"itemStyle":{"color":"#5b5bd6","opacity":0.55},"emphasis":{"itemStyle":{"opacity":1}}},{"name":"拟合线 (r=-0.58)","type":"line","data":[[1.0,636.3535835020928],[8.0,-8.558142933989188]],"showSymbol":false,"silent":true,"lineStyle":{"width":2,"type":"dashed","color":"#f04438"},"tooltip":{"show":false}}]}},{"id":"chart-6","option":{"animationDuration":450,"color":["#5b5bd6","#12b76a","#f79009","#f04438","#06aed4","#9e77ed","#ee46bc","#84cc16"],"textStyle":{"fontFamily":"Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif","color":"#344054"},"tooltip":{"backgroundColor":"#ffffff","borderColor":"#eaecf0","borderWidth":1,"textStyle":{"color":"#101828","fontSize":12},"extraCssText":"box-shadow:0 10px 28px rgba(16,24,40,.12);border-radius:10px;padding:10px 12px;","trigger":"axis","axisPointer":{"type":"shadow","shadowStyle":{"color":"rgba(91,91,214,.06)"}}},"grid":{"left":10,"right":18,"top":26,"bottom":10,"containLabel":true},"xAxis":{"type":"value","axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"show":false}},"yAxis":{"type":"category","data":["分销","线下","线上"],"axisLabel":{"color":"#667085","fontSize":11,"interval":0,"hideOverlap":true},"axisLine":{"lineStyle":{"color":"#d0d5dd"}},"axisTick":{"show":false}},"series":[{"name":"销售额","type":"bar","data":[194404.51,464563.17,1032348.24],"barMaxWidth":26,"itemStyle":{"color":"#5b5bd6","borderRadius":[0,6,6,0]},"label":{"show":true,"position":"right","color":"#475467","fontSize":10,"formatter":"{c}"}}]}},{"id":"chart-7","option":{"animationDuration":450,"color":["#5b5bd6","#12b76a","#f79009","#f04438","#06aed4","#9e77ed","#ee46bc","#84cc16"],"textStyle":{"fontFamily":"Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif","color":"#344054"},"tooltip":{"backgroundColor":"#ffffff","borderColor":"#eaecf0","borderWidth":1,"textStyle":{"color":"#101828","fontSize":12},"extraCssText":"box-shadow:0 10px 28px rgba(16,24,40,.12);border-radius:10px;padding:10px 12px;","trigger":"item"},"grid":{"left":10,"right":18,"top":26,"bottom":10,"containLabel":true},"xAxis":{"type":"category","data":["客单价"],"axisLabel":{"color":"#667085","fontSize":11},"axisLine":{"lineStyle":{"color":"#d0d5dd"}},"axisTick":{"show":false}},"yAxis":{"type":"value","scale":true,"axisLabel":{"color":"#667085","fontSize":11},"splitLine":{"lineStyle":{"color":"#eaecf0","type":"dashed"}},"axisLine":{"show":false}},"series":[{"name":"客单价","type":"boxplot","data":[[9.52,102.52,201.505,377.2825,3156.5]],"itemStyle":{"color":"rgba(91,91,214,.12)","borderColor":"#5b5bd6"}},{"name":"异常值","type":"scatter","data":[[0,946.95],[0,890.36],[0,873.83],[0,897.09],[0,1402.23],[0,1047.75],[0,1028.81],[0,920.22],[0,1781.3],[0,1152.61],[0,865.72],[0,1107.0],[0,1149.78],[0,795.5],[0,994.85],[0,1192.83],[0,1151.07],[0,2885.34],[0,1509.88],[0,821.96],[0,908.99],[0,1523.41],[0,1595.96],[0,2368.54],[0,811.16],[0,2097.65],[0,1117.63],[0,1752.64],[0,2386.64],[0,1592.74],[0,1077.11],[0,1279.96],[0,2277.85],[0,877.37],[0,1582.9],[0,1625.91],[0,897.55],[0,1329.41],[0,1216.13],[0,1468.46],[0,1725.92],[0,1367.37],[0,1133.43],[0,1469.71],[0,1044.6],[0,1106.6],[0,2120.51],[0,879.81],[0,975.45],[0,809.75],[0,1109.72],[0,1231.41],[0,861.92],[0,1160.87],[0,938.53],[0,1388.29],[0,848.18],[0,1287.58],[0,1978.4],[0,1141.7],[0,1356.67],[0,1311.14],[0,1109.53],[0,805.35],[0,1927.12],[0,1232.07],[0,1620.89],[0,1331.34],[0,1873.13],[0,1566.72],[0,907.5],[0,994.99],[0,859.06],[0,1147.22],[0,894.03],[0,1661.67],[0,1163.49],[0,925.01],[0,1131.9],[0,1271.91],[0,2033.28],[0,2333.05],[0,843.2],[0,2022.8],[0,885.0],[0,2531.2],[0,1303.25],[0,1606.82],[0,1245.04],[0,2011.69],[0,1492.26],[0,2558.27],[0,2666.5],[0,1635.03],[0,936.05],[0,978.52],[0,1374.16],[0,1165.73],[0,2749.6],[0,1932.77],[0,2253.97],[0,1375.87],[0,899.71],[0,926.34],[0,1149.64],[0,1618.06],[0,3156.5],[0,804.4],[0,1133.74],[0,1022.92],[0,2823.77],[0,1785.8],[0,826.65],[0,902.24],[0,896.39],[0,875.68],[0,1028.32],[0,1361.91],[0,1252.69],[0,1272.01],[0,918.46],[0,881.11],[0,970.38],[0,866.12],[0,847.35],[0,1435.48],[0,864.85],[0,991.42],[0,1667.07],[0,1350.82],[0,957.96],[0,854.95],[0,927.4],[0,1393.47],[0,919.89]],"symbolSize":5,"itemStyle":{"color":"#f04438","opacity":0.7}}]}}]</script>
+  <script>
+    (function () {
+      if (typeof echarts === 'undefined') {
+        document.querySelectorAll('.chart').forEach(function (element) {
+          element.innerHTML = '<div class="chart-fallback">图表组件未能加载。请联网后重新打开此文件；文字结论、字段画像与数据预览不受影响。</div>';
+          element.style.height = 'auto';
+        });
+        return;
+      }
+      try {
+        var charts = JSON.parse(document.getElementById('chart-data').textContent);
+        charts.forEach(function (item) {
+          var element = document.getElementById(item.id);
+          if (element) echarts.init(element).setOption(item.option);
+        });
+      } catch (error) { console.error(error); }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+services:
+  dataloom:
+    build: .
+    image: dataloom:local
+    container_name: dataloom
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      DATALOOM_MAX_UPLOAD_MB: "100"
+    restart: unless-stopped
+
